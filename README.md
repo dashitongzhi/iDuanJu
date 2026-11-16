@@ -7,7 +7,13 @@
 i短剧 是一个原生 SwiftUI 编写的 iOS 多源短剧 / 视频 / 漫画 / Telegram 频道聚合播放器，另有原生 Kotlin 编写的
 [Android 版](#android-版)。App 本身**不托管任何内容**，所有数据都由你的设备直接向各个公开站点请求。
 
-**下载**：到 [Releases](https://github.com/my-name-is-alan/iDuanJu/releases) 获取 iOS 未签名 IPA 和 Android APK
+### 此 fork 的 iOS 改动（2026-11-17）
+
+基于原作者 `main` 的 `4b61fdb`，保留 2026-11-16 的红果取流、筛选和其他上游更新，
+另加入横屏上下滑动切集及系统 Tab 栏。iOS 构建号为 **1.5（9）**，Bundle ID 仍为 `com.local.STV`。
+下方原作者 Releases 链接中的安装包不包含此 fork 的改动；请从本 fork 源码构建。
+
+**原作者下载**：到 [Releases](https://github.com/my-name-is-alan/iDuanJu/releases) 获取 iOS 未签名 IPA 和 Android APK
 （[Android 1.5.8 红果修复版](https://github.com/my-name-is-alan/iDuanJu/releases/tag/v1.5.8-hgfix-android)、
 [iOS 1.5 build 8 红果修复版](https://github.com/my-name-is-alan/iDuanJu/releases/tag/v1.5b8-hgfix)）。
 
@@ -39,6 +45,9 @@ i短剧 是一个原生 SwiftUI 编写的 iOS 多源短剧 / 视频 / 漫画 / T
 - **去广告**：自动剔除 HLS 片源中插播的广告片段（adjump、异域名短片段、AES 片源里的明文短片段等），默认开启，可在设置里关闭
 - **播放器**：自绘控制层、竖屏默认 / 旋转或手动横屏、亮度音量手势、倍速、画质 / 线路切换、选集、弹幕、跳过片头、
   预缓冲、本地 HLS 代理、CENC 解密、Telegram 视频边下边播（TDLib Range 流式）
+- **横屏切集**：横竖屏均可在画面中间 60% 区域上滑下一集、下滑上一集；左侧 20% 调亮度、右侧 20% 调音量
+  （最左侧保留返回手势）。锁屏、拖动进度、长按倍速、画中画或打开选项面板时暂停滑动切集。
+- **底部导航**：使用系统 Tab 栏切换首页、搜索、找剧和我的；进入详情或播放器后隐藏，返回根页面时恢复。
 - **Cloudflare 验证**：隐藏 WebView 自动过验证（每个插件独立）
 
 ## 截图
@@ -69,7 +78,7 @@ i短剧 是一个原生 SwiftUI 编写的 iOS 多源短剧 / 视频 / 漫画 / T
 
 ```bash
 brew install xcodegen
-git clone https://github.com/my-name-is-alan/iDuanJu.git && cd iDuanJu
+git clone https://github.com/dashitongzhi/iDuanJu.git && cd iDuanJu
 xcodegen generate          # 生成 STV.xcodeproj（工程文件不入库）
 open STV.xcodeproj         # 或命令行：
 xcodebuild -project STV.xcodeproj -scheme STV -sdk iphonesimulator \
@@ -98,6 +107,13 @@ scripts/package.sh            # 输出到 ./dist/STV-<版本>-unsigned.ipa
 ```
 
 未签名 IPA 用 AltStore / Sideloadly / TrollStore 等工具用你自己的 Apple ID 重签后安装。
+
+### 更新安装与保留数据
+
+在现有 App 上更新，不要先卸载。沿用原安装工具、签名身份和 Bundle ID，并保持钥匙串访问组兼容；
+项目默认 Bundle ID 为 `com.local.STV`。仅保持显示名称相同不足以保留应用身份。
+更换签名或钥匙串访问组可能导致原凭据无法读取，即使应用数据目录仍在，也不能保证继续保持登录。
+更新前应备份可访问的应用数据；普通应用目录备份不包含系统钥匙串，不能替代完整的恢复验证。
 
 ## Android 版
 

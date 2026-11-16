@@ -4,7 +4,7 @@ import MediaPlayer
 import AVFoundation
 
 /// Brightness (left) / volume (right) vertical-swipe adjustment for the player.
-/// Zones: landscape = left/right half; portrait = outer 1/5 strips only (the middle keeps 抖音式 paging),
+/// Zones: outer 1/5 strips in both orientations (the middle keeps episode paging),
 /// always excluding the edge-back strip. Brightness is restored when the player goes away.
 enum AdjustSide { case brightness, volume }
 
@@ -19,7 +19,6 @@ final class PlayerAdjuster {
 
     static func zone(x: CGFloat, width: CGFloat, landscape: Bool, edge: CGFloat) -> AdjustSide? {
         guard width > 0, x >= edge, x <= width - 8 else { return nil }
-        if landscape { return x < width / 2 ? .brightness : .volume }
         if x < width * 0.2 { return .brightness }
         if x > width * 0.8 { return .volume }
         return nil

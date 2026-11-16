@@ -2,7 +2,7 @@ import XCTest
 
 /// Real-interaction regression for the 发现 page (taps / swipes, not screenshots):
 /// search + filter, channel tabs, expand panel, hero swipe + taps, section 全部 + cards,
-/// vertical scrolling, the floating tab bar, and the other root pages' top controls.
+/// vertical scrolling, the system tab bar, and the other root pages' top controls.
 /// Needs the hongguo network (same as the app's home feed).
 final class HomeInteractionUITests: XCTestCase {
     var app: XCUIApplication!
@@ -120,7 +120,7 @@ final class HomeInteractionUITests: XCTestCase {
         back()
         XCTAssertTrue(el("home.card").waitForExistence(timeout: 10))
         el("home.page.红果").swipeUp()
-        // A card fully above the floating tab bar.
+        // A card fully above the system tab bar.
         let card = app.descendants(matching: .any).matching(identifier: "home.card").allElementsBoundByIndex
             .first { $0.frame.minY > 120 && $0.frame.maxY < app.frame.height - 110 }
         XCTAssertNotNil(card, "no card on screen")
@@ -136,24 +136,54 @@ final class HomeInteractionUITests: XCTestCase {
     }
 
     func testTabBarAndOtherRootTops() {
-        fingerTap(el("tab.1"))
+        fingerTap(app.tabBars.buttons["搜索"])
         XCTAssertTrue(app.textFields.firstMatch.waitForExistence(timeout: 8), "搜索 tab")
         fingerTap(app.textFields.firstMatch)
         app.typeText("总裁")
         XCTAssertEqual(app.textFields.firstMatch.value as? String, "总裁", "search field at top not tappable")
         app.typeText("\n")   // submit → keyboard goes away so the tab bar is reachable again
-        fingerTap(el("tab.2"))
+        fingerTap(app.tabBars.buttons["找剧"])
         XCTAssertTrue(app.buttons["榜单"].firstMatch.waitForExistence(timeout: 8), "找剧 tab")
         // Top controls of 找剧 respond (segment + genre pill).
         fingerTap(app.buttons["榜单"].firstMatch)
         let pill = app.buttons["真人剧"].firstMatch
         if pill.waitForExistence(timeout: 5) { fingerTap(pill) }
-        fingerTap(el("tab.3"))
+        fingerTap(app.tabBars.buttons["我的"])
         XCTAssertTrue(app.staticTexts["我的"].firstMatch.waitForExistence(timeout: 8), "我的 tab")
-        fingerTap(el("tab.0"))
+        fingerTap(app.tabBars.buttons["首页"])
         XCTAssertTrue(el("home.search").waitForExistence(timeout: 8), "首页 tab")
         fingerTap(el("home.search"))
         XCTAssertTrue(app.textFields.firstMatch.waitForExistence(timeout: 8))
+    }
+}
+
+/// Starts on the local profile page so tab-bar visibility does not depend on a catalogue request.
+final class SystemTabBarUITests: XCTestCase {
+    func testSystemTabsHideOnPushAndRestoreOnReturn() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchEnvironment["STV_TAB"] = "3"
+        app.launch()
+        let tabs = app.tabBars.firstMatch
+        XCTAssertTrue(tabs.waitForExistence(timeout: 10))
+        for title in ["首页", "搜索", "找剧", "我的"] {
+            XCTAssertTrue(tabs.buttons[title].exists, "missing native tab \(title)")
+        }
+        XCTAssertTrue(tabs.buttons["我的"].isSelected)
+        let sources = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "片源管理")).firstMatch
+        sources.tap()
+        let hidden = NSPredicate(format: "exists == false")
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation(for: hidden, evaluatedWith: tabs)], timeout: 5), .completed)
+        let window = app.windows.firstMatch
+        window.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5))
+            .press(forDuration: 0.05, thenDragTo:
+                window.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)))
+        XCTAssertTrue(tabs.waitForExistence(timeout: 5))
+        XCTAssertTrue(tabs.buttons["我的"].isSelected)
+        tabs.buttons["搜索"].tap()
+        XCTAssertTrue(app.textFields.firstMatch.waitForExistence(timeout: 5))
+        tabs.buttons["我的"].tap()
+        XCTAssertTrue(sources.waitForExistence(timeout: 5))
     }
 }
 
