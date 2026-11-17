@@ -12,11 +12,15 @@ final class PlayerAdjustTests: XCTestCase {
         XCTAssertNil(PlayerAdjuster.zone(x: 319, width: w, landscape: false, edge: e))
         XCTAssertEqual(PlayerAdjuster.zone(x: 350, width: w, landscape: false, edge: e), .volume)
     }
-    func testLandscapeHalves() {
+    func testLandscapeReservesMiddleForEpisodePaging() {
         let w: CGFloat = 900, e: CGFloat = 36
         XCTAssertNil(PlayerAdjuster.zone(x: 10, width: w, landscape: true, edge: e))
-        XCTAssertEqual(PlayerAdjuster.zone(x: 300, width: w, landscape: true, edge: e), .brightness)
-        XCTAssertEqual(PlayerAdjuster.zone(x: 600, width: w, landscape: true, edge: e), .volume)
+        XCTAssertEqual(PlayerAdjuster.zone(x: 100, width: w, landscape: true, edge: e), .brightness)
+        for x: CGFloat in [180, 300, 450, 600, 720] {
+            XCTAssertNil(PlayerAdjuster.zone(x: x, width: w, landscape: true, edge: e), "middle pages at \(x)")
+        }
+        XCTAssertEqual(PlayerAdjuster.zone(x: 800, width: w, landscape: true, edge: e), .volume)
+        XCTAssertNil(PlayerAdjuster.zone(x: 899, width: w, landscape: true, edge: e), "system edge")
     }
     func testBrightnessClampAndRestore() {
         let a = PlayerAdjuster()

@@ -186,6 +186,68 @@ final class PlayerUITests: XCTestCase {
         launch(["STV_FX_EPISODES": "4", "STV_FX_TITLE": "测试图案合集", "STV_KEEP_CHROME": "1"])
         XCTAssertTrue(el("player.progress").waitForExistence(timeout: 20), "player did not become ready")
     }
+
+    private func assertEpisode(_ number: Int, file: StaticString = #filePath, line: UInt = #line) {
+        let selected = NSPredicate(format: "value == %@", "第\(number)集")
+        let ready = expectation(for: selected, evaluatedWith: el("player.episodeInfo"))
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 8), .completed,
+                       "expected episode \(number)", file: file, line: line)
+        XCTAssertTrue(el("player.progress").waitForExistence(timeout: 20),
+                      "selected episode did not become ready", file: file, line: line)
+    }
+
+    private func swipeEpisode(next: Bool, x: CGFloat = 0.5) {
+        let window = app.windows.firstMatch
+        window.coordinate(withNormalizedOffset: CGVector(dx: x, dy: next ? 0.65 : 0.35))
+            .press(forDuration: 0.05, thenDragTo:
+                window.coordinate(withNormalizedOffset: CGVector(dx: x, dy: next ? 0.2 : 0.8)))
+        Thread.sleep(forTimeInterval: 0.5) // let paging/boundary bounce settle before the next gesture
+    }
+
+    func testLandscapeEpisodePagingAndRotation() {
+        launchV3()
+        assertEpisode(1)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(waitOrientation(landscape: true))
+        assertEpisode(1)
+        swipeEpisode(next: false)
+        assertEpisode(1) // the first page must not wrap to the last
+        swipeEpisode(next: true)
+        assertEpisode(2)
+        shot("landscape_swipe_episode_2")
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertTrue(waitOrientation(landscape: false))
+        assertEpisode(2)
+        XCUIDevice.shared.orientation = .landscapeRight
+        XCTAssertTrue(waitOrientation(landscape: true))
+        assertEpisode(2)
+        swipeEpisode(next: false)
+        assertEpisode(1)
+        for episode in 2...4 {
+            swipeEpisode(next: true)
+            assertEpisode(episode)
+        }
+        swipeEpisode(next: true)
+        assertEpisode(4) // the last page must not wrap
+    }
+
+    func testLandscapeSideAdjustmentsAndLockDoNotChangeEpisode() {
+        launchV3()
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(waitOrientation(landscape: true))
+        for x: CGFloat in [0.12, 0.88] {
+            swipeEpisode(next: true, x: x)
+            assertEpisode(1)
+        }
+        el("player.lock").tap()
+        swipeEpisode(next: true)
+        el("player.video").tap() // reveal the unlock button if the chrome hid
+        el("player.unlock").tap()
+        assertEpisode(1)
+        swipeEpisode(next: true)
+        assertEpisode(2)
+    }
+
     func popoverGone(_ id: String) -> Bool {
         let p = NSPredicate(format: "exists == false")
         return XCTWaiter().wait(for: [expectation(for: p, evaluatedWith: el(id))], timeout: 4) == .completed

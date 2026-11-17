@@ -49,7 +49,7 @@ struct PlayerScreen: View {
     @State private var pendingCancel = false
     @State private var speedBaseIndex = 0
     @State private var lastStepOffset = 0
-    /// Portrait feed content offset (pt): the shared video layer rides along with the page being swiped.
+    /// Feed content offset (pt): the shared video layer rides along with the page in either orientation.
     @State private var feedScrollY: CGFloat = 0
     /// Running double-tap seek (+10/+20/… s) and which side it is on; drives the side bubble.
     @State private var seekRun: (total: Int, at: Date)?
@@ -101,7 +101,7 @@ struct PlayerScreen: View {
                         .accessibilityElement().accessibilityIdentifier("player.video").accessibilityValue(fillScreen ? "fill" : "fit")
                         .frame(width: area.width, height: area.height).offset(x: area.minX, y: area.minY - pageDrift(co.current ?? 0, page: full.height))
                         .allowsHitTesting(false)
-                    if let held = co.heldFrame, !landscape {
+                    if let held = co.heldFrame {
                         // Previous episode's last frame, riding with the swipe until the next one is on screen.
                         Image(uiImage: held.image).resizable()
                             .frame(width: area.width, height: area.height).offset(x: area.minX, y: area.minY - pageDrift(held.index, page: full.height))
@@ -109,7 +109,7 @@ struct PlayerScreen: View {
                     }
                     Group {
                         if co.current != nil {
-                            if landscape { stage(co.current!) } else { portraitFeed }
+                            episodeFeed
                         } else if let loadError {
                             ErrorStateView(error: loadError) { Task { await load() } }
                         } else {
@@ -279,9 +279,9 @@ struct PlayerScreen: View {
             }
     }
 
-    // MARK: Portrait feed
+    // MARK: Episode feed
 
-    private var portraitFeed: some View {
+    private var episodeFeed: some View {
         ScrollView(.vertical) {
             LazyVStack(spacing: 0) {
                 ForEach(co.episodes.indices, id: \.self) { i in
@@ -291,7 +291,7 @@ struct PlayerScreen: View {
         }
         .scrollTargetBehavior(.paging)
         .scrollIndicators(.hidden)
-        .scrollPosition(id: Binding(get: { co.current }, set: { co.select($0) }))
+        .scrollPosition(id: Binding(get: { co.current }, set: { co.select($0) }), anchor: .center)
         .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y }) { _, y in feedScrollY = y }
         .sensoryFeedback(.selection, trigger: co.current)
         .onChange(of: co.readyIndex) { _, _ in releaseHeldIfSettled() }
@@ -299,7 +299,7 @@ struct PlayerScreen: View {
         .onChange(of: co.current) { old, new in
             if old != nil, let new, co.episodes.indices.contains(new) { showOSD("第\(co.episodes[new].ep)集") }
         }
-        .scrollDisabled(speedMode || scrubbing || co.pipActive || panel != nil)
+        .scrollDisabled(locked || speedMode || scrubbing || co.pipActive || panel != nil)
     }
 
     /// Drop the previous episode's still once the new one is playing and the page has stopped moving.
@@ -309,9 +309,9 @@ struct PlayerScreen: View {
     }
     @State private var feedSettled = true
 
-    /// Offset of page `index` from rest (portrait), capped at one page either way.
+    /// Offset of page `index` from rest, capped at one page either way.
     private func pageDrift(_ index: Int, page: CGFloat) -> CGFloat {
-        guard !landscape, page > 0 else { return 0 }
+        guard page > 0 else { return 0 }
         return max(-page, min(page, feedScrollY - CGFloat(index) * page))
     }
 
@@ -549,6 +549,9 @@ struct PlayerScreen: View {
         }
         return PlayerMetaRow(source: longList && co.episodes.count > 1 ? nil : series.source.label, line: line, lineStrong: strong, rest: rest,
                              showSkip: skip && showSkip, onSkip: skipIntro)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("player.episodeInfo")
+            .accessibilityValue("第\(e.ep)集")
     }
 
     private var introEnd: Double { series.source.isLongVideo ? 90 : 15 }
@@ -1034,7 +1037,7 @@ struct PlayerTouchCatcher: UIViewRepresentable {
         /// After a side double tap, further taps on that side keep seeking until this time.
         private var streak: (until: Date, right: Bool)?
         let longPress = UILongPressGestureRecognizer()
-        /// Brightness / volume vertical pan (edge strips in portrait, half screens in landscape).
+        /// Brightness / volume vertical pan (outer fifths, leaving the middle for paging).
         let adjustPan = UIPanGestureRecognizer()
         private var adjustSide: AdjustSide?
         private var speedOrigin: CGPoint = .zero
