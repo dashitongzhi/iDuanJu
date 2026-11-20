@@ -8,6 +8,11 @@
 
 请前往 [Releases 页面](https://github.com/my-name-is-alan/iDuanJu/releases) 下载。
 
+## 此 Fork 的 iOS 调整
+
+- 首页、搜索、找剧和我的使用系统 Tab 栏。进入详情或播放器后隐藏，返回根页面后恢复。
+- 播放器保留上下滑切集，关闭剧集列表的系统轻点顶部回滚，避免误跳到第一集。
+
 ## 播放内核（AetherEngine）
 
 - 默认使用 **AetherEngine 7.62.0**（LGPL-3.0，附 App Store / DRM 例外条款），以 SwiftPM 静态链接、未修改。

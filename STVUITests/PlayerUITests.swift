@@ -280,6 +280,28 @@ final class PlayerUITests: XCTestCase {
         assertEpisode(4) // the last page must not wrap
     }
 
+    func testTopEdgeTapsKeepCurrentEpisode() {
+        launchV3()
+        swipeEpisode(next: true)
+        assertEpisode(2)
+
+        func tapTopAndCheckEpisode() {
+            app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.01)).tap()
+            let jumpedToFirst = expectation(for: NSPredicate(format: "value == %@", "第1集"),
+                                           evaluatedWith: el("player.title"))
+            jumpedToFirst.isInverted = true
+            wait(for: [jumpedToFirst], timeout: 1.5)
+            assertEpisode(2)
+        }
+
+        tapTopAndCheckEpisode()
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(waitOrientation(landscape: true))
+        tapTopAndCheckEpisode()
+        swipeEpisode(next: false)
+        assertEpisode(1)
+    }
+
     func testLandscapeSideAdjustmentsAndLockDoNotChangeEpisode() {
         launchV3()
         XCUIDevice.shared.orientation = .landscapeLeft

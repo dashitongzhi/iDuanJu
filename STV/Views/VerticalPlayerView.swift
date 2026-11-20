@@ -294,6 +294,7 @@ struct PlayerScreen: View {
                     stage(i).containerRelativeFrame([.horizontal, .vertical]).id(i)
                 }
             }.scrollTargetLayout()
+                .background(EpisodeFeedScrollConfiguration().allowsHitTesting(false).accessibilityHidden(true))
         }
         .scrollTargetBehavior(.paging)
         .scrollIndicators(.hidden)
@@ -1404,5 +1405,35 @@ private struct ChromeFade: ViewModifier {
     var keepAccessible = false
     func body(content: Content) -> some View {
         content.opacity(on ? 1 : 0).allowsHitTesting(on).accessibilityHidden(!on && !keepAccessible)
+    }
+}
+
+
+// Install inside the feed content so only the owning scroll view is affected.
+// A system scroll-to-top would land on page zero and the scroll binding would select episode 1.
+private struct EpisodeFeedScrollConfiguration: UIViewRepresentable {
+    func makeUIView(context: Context) -> Marker { Marker() }
+
+    func updateUIView(_ view: Marker, context: Context) {
+        view.disableScrollToTop()
+    }
+
+    final class Marker: UIView {
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            disableScrollToTop()
+        }
+
+        func disableScrollToTop() {
+            guard window != nil else { return }
+            var ancestor = superview
+            while let view = ancestor {
+                if let scrollView = view as? UIScrollView {
+                    scrollView.scrollsToTop = false
+                    return
+                }
+                ancestor = view.superview
+            }
+        }
     }
 }
