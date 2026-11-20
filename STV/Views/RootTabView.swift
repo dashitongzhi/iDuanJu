@@ -1,29 +1,34 @@
 import SwiftUI
 
-/// 四个根页面 + PlutoFish 式底部悬浮玻璃胶囊导航（系统 TabBar 隐藏）。
-/// 胶囊只在根页面显示；进入详情 / 播放器等二级页面时隐藏。
+/// Four independent navigation stacks hosted by the system tab bar.
+/// Pushed pages hide the tab bar; returning to a root restores it.
 struct RootTabView: View {
     @State private var tab = Int(ProcessInfo.processInfo.environment["STV_TAB"] ?? "") ?? 0
     @State private var paths = [NavigationPath(), NavigationPath(), NavigationPath(), NavigationPath()]
-    static let items: [(String, String)] = [("首页", "house.fill"), ("搜索", "magnifyingglass"),
-                                            ("找剧", "square.grid.2x2.fill"), ("我的", "person.crop.circle.fill")]
     var body: some View {
         TabView(selection: $tab) {
-            Stack(path: $paths[0]) { HomeView() }.tag(0)
-            Stack(path: $paths[1]) { SearchView() }.tag(1)
-            Stack(path: $paths[2]) { CategoryView() }.tag(2)
-            Stack(path: $paths[3]) { ProfileView() }.tag(3)
-        }
-        .tint(STVTheme.accent)
-        .overlay(alignment: .bottom) {
-            if paths[tab].isEmpty {
-                GlassTabBar(selection: $tab, items: Self.items) { i in
-                    if i == tab { paths[i] = NavigationPath() }
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+            Tab(value: 0) {
+                Stack(path: $paths[0]) { HomeView() }
+            } label: {
+                Label("首页", systemImage: "play.house.fill").accessibilityIdentifier("tab.0")
+            }
+            Tab(value: 1) {
+                Stack(path: $paths[1]) { SearchView() }
+            } label: {
+                Label("搜索", systemImage: "magnifyingglass").accessibilityIdentifier("tab.1")
+            }
+            Tab(value: 2) {
+                Stack(path: $paths[2]) { CategoryView() }
+            } label: {
+                Label("找剧", systemImage: "square.grid.2x2.fill").accessibilityIdentifier("tab.2")
+            }
+            Tab(value: 3) {
+                Stack(path: $paths[3]) { ProfileView() }
+            } label: {
+                Label("我的", systemImage: "person.crop.circle.fill").accessibilityIdentifier("tab.3")
             }
         }
-        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: paths[tab].isEmpty)
+        .tint(STVTheme.accent)
         .onAppear {
             Router.handler = { r in paths[tab].append(r) }
             #if DEBUG
@@ -34,56 +39,15 @@ struct RootTabView: View {
         .task { await TDLibService.shared.bootstrap() }
     }
 }
-
 private struct Stack<V: View>: View {
     @Binding var path: NavigationPath
     @ViewBuilder var content: V
     @Namespace private var ns
     var body: some View {
         NavigationStack(path: $path) {
-            content
-                .toolbar(.hidden, for: .tabBar)
-                .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: GlassTabBar.clearance) }
-                .routes()
-        }.environment(\.zoomNS, ns)
-    }
-}
-
-struct GlassTabBar: View {
-    static let clearance: CGFloat = 72
-    @Binding var selection: Int
-    let items: [(String, String)]
-    var onReselect: (Int) -> Void = { _ in }
-    @Namespace private var ns
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(items.indices, id: \.self) { i in
-                let on = i == selection
-                Button {
-                    if on { onReselect(i) } else { withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) { selection = i } }
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: items[i].1).font(.system(size: 17, weight: on ? .semibold : .regular)).frame(height: 20)
-                        Text(items[i].0).font(.system(size: 11, weight: on ? .semibold : .medium))
-                    }
-                    .foregroundStyle(on ? STVTheme.text : STVTheme.secondary)
-                    .frame(maxWidth: .infinity).frame(height: 48)
-                    .background {
-                        if on { Capsule().fill(STVTheme.glassBorder).matchedGeometryEffect(id: "pill", in: ns) }
-                    }
-                    .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(items[i].0)
-                .accessibilityIdentifier("tab.\(i)")
-                .accessibilityAddTraits(on ? .isSelected : [])
-            }
+            content.routes()
         }
-        .padding(6)
-        .frame(maxWidth: 400)
-        // ui-redesign `.tabbar`: 60 pt glass capsule, 16 pt from the sides, 26 pt above the screen edge.
-        .dsBar(30)
-        .padding(.horizontal, 16)
-        .padding(.bottom, -8)
+        .toolbar(path.isEmpty ? .visible : .hidden, for: .tabBar)
+        .environment(\.zoomNS, ns)
     }
 }

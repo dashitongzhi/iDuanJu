@@ -120,7 +120,7 @@ final class HomeInteractionUITests: XCTestCase {
         back()
         XCTAssertTrue(el("home.card").waitForExistence(timeout: 10))
         el("home.page.红果").swipeUp()
-        // A card fully above the floating tab bar.
+        // A card fully above the tab bar.
         let card = app.descendants(matching: .any).matching(identifier: "home.card").allElementsBoundByIndex
             .first { $0.frame.minY > 120 && $0.frame.maxY < app.frame.height - 110 }
         XCTAssertNotNil(card, "no card on screen")
@@ -136,21 +136,21 @@ final class HomeInteractionUITests: XCTestCase {
     }
 
     func testTabBarAndOtherRootTops() {
-        fingerTap(el("tab.1"))
+        fingerTap(app.tabBars.buttons["搜索"])
         XCTAssertTrue(app.textFields.firstMatch.waitForExistence(timeout: 8), "搜索 tab")
         fingerTap(app.textFields.firstMatch)
         app.typeText("总裁")
         XCTAssertEqual(app.textFields.firstMatch.value as? String, "总裁", "search field at top not tappable")
         app.typeText("\n")   // submit → keyboard goes away so the tab bar is reachable again
-        fingerTap(el("tab.2"))
+        fingerTap(app.tabBars.buttons["找剧"])
         XCTAssertTrue(app.buttons["榜单"].firstMatch.waitForExistence(timeout: 8), "找剧 tab")
         // Top controls of 找剧 respond (segment + genre pill).
         fingerTap(app.buttons["榜单"].firstMatch)
         let pill = app.buttons["真人剧"].firstMatch
         if pill.waitForExistence(timeout: 5) { fingerTap(pill) }
-        fingerTap(el("tab.3"))
+        fingerTap(app.tabBars.buttons["我的"])
         XCTAssertTrue(app.staticTexts["我的"].firstMatch.waitForExistence(timeout: 8), "我的 tab")
-        fingerTap(el("tab.0"))
+        fingerTap(app.tabBars.buttons["首页"])
         XCTAssertTrue(el("home.search").waitForExistence(timeout: 8), "首页 tab")
         fingerTap(el("home.search"))
         XCTAssertTrue(app.textFields.firstMatch.waitForExistence(timeout: 8))
